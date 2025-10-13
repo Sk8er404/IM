@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.PostCommentMapper">
+
+    <insert id="saveComment" parameterType="PostComment">
+        INSERT INTO post_comments (id, postId, userId,userName, content,parentId,replyTo)
+        VALUES (#{id}, #{postId}, #{userId},#{userName}, #{content},#{parentId},#{replyTo})
+    </insert>
+
+    <select id="findCommentById" resultType="PostComment">
+        SELECT * FROM post_comments WHERE id = #{id}
+    </select>
+
+    <!-- 传统分页方法（保持兼容） -->
+    <select id="findCommentsByPostId" resultType="PostComment">
+        SELECT * FROM post_comments
+        WHERE postId = #{postId} AND parentId IS NULL
+        ORDER BY createdAt ASC
+        LIMIT #{size} OFFSET #{page}
+    </select>
+    
+    <select id="findRepliesByParentId" resultType="PostComment">
+        SELECT * FROM post_comments
+        WHERE parentId = #{parentId} and postId = #{postId}
+        ORDER BY createdAt ASC
+        LIMIT #{size} OFFSET #{page}
+    </select>
+
+    <update id="updateComment" parameterType="PostComment">
+        UPDATE post_comments
+        SET content = #{content}
+        WHERE id = #{id} AND userId = #{userId}
+    </update>
+
+    <delete id="deleteCommentByIdAndUserId">
+        DELETE FROM post_comments WHERE id = #{id} AND userId = #{userId}
+    </delete>
+
+    <delete id="deleteRepliesByParentId">
+        DELETE FROM post_comments WHERE parentId = #{parentId}
+    </delete>
+
+    <update id="incrementLikeCount">
+        UPDATE post_comments SET likeCount = likeCount + 1 WHERE id = #{id}
+    </update>
+
+    <update id="decrementLikeCount">
+        UPDATE post_comments SET likeCount = GREATEST(0, likeCount - 1) WHERE id = #{id}
+    </update>
+
+    <update id="increaseCommentCount">
+        update post_comments set repliesCount = repliesCount + 1 where id = #{id}
+    </update>
+
+    <update id="decreaseCommentCount">
+        update post_comments set repliesCount = GREATEST(0, repliesCount - 1) where id = #{id}
+    </update>
+
+    <update id="increasePostCommentCount">
+        update posts set commentCount = commentCount + 1 where id = #{id}
+    </update>
+
+    <update id="decreasePostCommentCount">
+        update posts set commentCount = GREATEST( 0 ,commentCount - #{repliesCount}-1) where id = #{id}
+    </update>
+
+    <!-- 获取帖子评论最小autoIncreasementId，用于初始化分页查询 -->
+    <select id="selectPostCommentMinAutoIncrementId" resultType="Long">
+        SELECT MIN(autoIncreasementId) FROM post_comments
+        <where>
+            postId = #{postId}
+            <choose>
+                <when test="parentId != null">
+                    AND parentId = #{parentId}
+                </when>
+                <otherwise>
+                    AND parentId IS NULL
+                </otherwise>
+            </choose>
+        </where>
+    </select>
+
+    <!-- 帖子评论游标分页 - 向后翻页（获取帖子顶级评论） -->
+    <select id="queryCommentsByPostIdAndNavigateToNextPageByIdRange" resultType="PostComment" parameterType="map">
+        SELECT id, postId, userId, userName, parentId, replyTo, content, likeCount, repliesCount, 
+               createdAt, updatedAt, autoIncreasementId
+        FROM post_comments
+        WHERE postId = #{postId} AND parentId IS NULL
+        AND autoIncreasementId > #{curPageMaxId}
+        ORDER BY autoIncreasementId ASC
+        LIMIT #{nextPageMultiplyPageSize}
+    </select>
+    
+    <!-- 帖子评论游标分页 - 向前翻页（获取帖子顶级评论） -->
+    <select id="queryCommentsByPostIdAndNavigateToPreviousPageByIdRange" resultType="PostComment" parameterType="map">
+        SELECT id, postId, userId, userName, parentId, replyTo, content, likeCount, repliesCount, 
+               createdAt, updatedAt, autoIncreasementId
+        FROM post_comments
+        WHERE postId = #{postId} AND parentId IS NULL
+        AND autoIncreasementId &lt; #{curPageMinId}
+        ORDER BY autoIncreasementId DESC
+        LIMIT #{nextPageMultiplyPageSize}
+    </select>
+    
+    <!-- 帖子评论回复游标分页 - 向后翻页（获取评论回复） -->
+    <select id="queryRepliesByParentIdAndNavigateToNextPageByIdRange" resultType="PostComment" parameterType="map">
+        SELECT id, postId, userId, userName, parentId, replyTo, content, likeCount, repliesCount, 
+               createdAt, updatedAt, autoIncreasementId
+        FROM post_comments
+        WHERE postId = #{postId} AND parentId = #{parentId}
+        AND autoIncreasementId > #{curPageMaxId}
+        ORDER BY autoIncreasementId ASC
+        LIMIT #{nextPageMultiplyPageSize}
+    </select>
+    
+    <!-- 帖子评论回复游标分页 - 向前翻页（获取评论回复） -->
+    <select id="queryRepliesByParentIdAndNavigateToPreviousPageByIdRange" resultType="PostComment" parameterType="map">
+        SELECT id, postId, userId, userName, parentId, replyTo, content, likeCount, repliesCount, 
+               createdAt, updatedAt, autoIncreasementId
+        FROM post_comments
+        WHERE postId = #{postId} AND parentId = #{parentId}
+        AND autoIncreasementId &lt; #{curPageMinId}
+        ORDER BY autoIncreasementId DESC
+        LIMIT #{nextPageMultiplyPageSize}
+    </select>
+
+</mapper> 

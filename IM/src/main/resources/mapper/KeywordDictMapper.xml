@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.KeywordDictMapper">
+    <select id="selectAllKeyword" resultType="String">
+        select keyword from keyword_dict
+    </select>
+
+    <insert id="insertManyKeyword">
+        insert ignore into keyword_dict (keyword) values
+        <foreach collection="keywordList" item="keyword" separator=",">
+            (#{keyword})
+        </foreach>
+    </insert>
+
+</mapper>

@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.MessageMapper">
+    <insert id="insertBatchMsg" parameterType="Messages">
+        insert into messages(messageId,sessionId,senderId,content,messageType,createdAt)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.messageId},#{item.sessionId},
+             #{item.senderId},#{item.content},#{item.messageType},#{item.createdAt})
+        </foreach>
+    </insert>
+
+    <select id="queryUnreadMessages" resultType="Messages">
+        select messageId,sessionId,senderId,content,messageType,createdAt from messages where messageId in
+        <foreach collection="list" item="item" open="(" close=")" separator=",">
+            #{item}
+        </foreach>
+    </select>
+
+    <delete id='deleteGroupMessages'>
+        delete from messages where sessionId = #{sessionId}
+    </delete>
+
+    <select id="queryMessagesByTimestamp" resultType="Messages">
+        select messageId,sessionId,senderId,content,messageType,createdAt from messages 
+        where sessionId in
+        <foreach collection="sessionIdList" item="sessionId" open="(" close=")" separator=",">
+            #{sessionId}
+        </foreach>
+        and createdAt &gt; FROM_UNIXTIME(#{earliestMessageTimestamp} / 1000) + INTERVAL ((#{earliestMessageTimestamp} % 1000)*1000) MICROSECOND
+        and createdAt &lt; FROM_UNIXTIME(#{minimumTimeStampScoreOfUnreadMessage} / 1000) + INTERVAL ((#{minimumTimeStampScoreOfUnreadMessage} % 1000)*1000) MICROSECOND
+        order by createdAt asc
+    </select>
+
+</mapper>

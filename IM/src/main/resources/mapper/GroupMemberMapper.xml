@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.GroupMemberMapper">
+    <insert id="insertMembersToGroup">
+        insert into group_members(
+        sessionId, userId,nickName,
+        joinedTime,role
+        ) values
+        <foreach collection="members" item="member" separator=",">
+            (
+            #{member.sessionId}, #{member.userId},
+            <if test="member.nickName != null">#{member.nickName},</if>
+            <if test="member.joinedTime != null">#{member.joinedTime},</if>
+            #{member.role}
+            )
+        </foreach>
+    </insert>
+
+    <select id="queryGroupMemberList" resultType="GroupMemberQuery">
+        select g.sessionId,g.userId,g.nickName,g.joinedTime,g.role,u.avatar
+        from group_members g inner join user u on g.userId = u.id
+        where g.sessionId = #{sessionId}
+    </select>
+
+    <delete id="deleteAllGroupMembers">
+        delete from group_members where sessionId = #{sessionId}
+    </delete>
+
+    <delete id="deleteGroupMember">
+        delete from group_members where sessionId = #{sessionId} and userId = #{userId}
+    </delete>
+
+    <update id="updateMemberRole">
+        update group_members set role = #{role} where sessionId = #{sessionId} and userId = #{userId}
+    </update>
+
+</mapper>

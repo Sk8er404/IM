@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.LearningTaskMapper">
+
+    <insert id="saveTask" parameterType="LearningTask">
+        insert into learning_task (id, planId, userId, description, frequency, targetDueDate, reminderEnabled, reminderTime, isCompletedToday, totalCompletions)
+        values (#{id}, #{planId}, #{userId}, #{description}, #{frequency}, #{targetDueDate}, #{reminderEnabled}, #{reminderTime, jdbcType=TIME}, #{isCompletedToday}, #{totalCompletions})
+    </insert>
+
+    <select id="findByPlanIdAndUserId" resultType="LearningTask">
+        select id, planId, userId, description, frequency, targetDueDate, reminderEnabled, reminderTime, isCompletedToday, totalCompletions, createdAt, updatedAt
+        from learning_task
+        where planId = #{planId} and userId = #{userId};
+    </select>
+
+    <select id="findByIdAndUserId" resultType="LearningTask">
+        select id, planId, userId, description, frequency, targetDueDate, reminderEnabled, reminderTime, isCompletedToday, totalCompletions, createdAt, updatedAt
+        from learning_task
+        where id = #{id} and userId = #{userId};
+    </select>
+
+    <select id="selectTodayOnGoingTask" resultType="LearningTask">
+        select id, planId,description
+        from learning_task
+        where (targetDueDate is null or now() &lt; targetDueDate + interval 1 day) and isCompletedToday = false
+        and userId = #{userId}
+        and planId in
+        <foreach collection="planIds" item="planId" open="(" separator="," close=")">
+            #{planId}
+        </foreach>
+    </select>
+
+    <update id="resetAllTasksCompletionStatus">
+        UPDATE learning_task
+        set isCompletedToday = false
+        where isCompletedToday = true and (targetDueDate is null or now() &lt; targetDueDate + interval 1 day);
+    </update>
+
+    <select id="findByReminderEnabledTrueAndReminderTimeBetweenAndIsCompletedTodayFalse" resultType="LearningTask">
+        select id, planId, userId, description, frequency, targetDueDate, reminderEnabled, reminderTime, isCompletedToday, totalCompletions, createdAt, updatedAt
+        from learning_task
+        where reminderEnabled = true
+          and reminderTime between #{param1} and #{param2}
+          and isCompletedToday = false
+          and (targetDueDate is null or now() &lt; targetDueDate + interval 1 day);
+    </select>
+
+    <select id="findByUserId" resultType="LearningTask">
+        select id, planId, userId, description, frequency, targetDueDate, reminderEnabled, reminderTime, isCompletedToday, totalCompletions, createdAt, updatedAt
+        from learning_task
+        where userId = #{userId};
+    </select>
+
+    <delete id="deleteByUserIdAndId">
+        delete from learning_task
+        where userId = #{userId} and id = #{id};
+    </delete>
+
+    <update id="updateTask" parameterType="LearningTask">
+        update learning_task
+        set description = #{description},
+            frequency = #{frequency},
+            targetDueDate = #{targetDueDate},
+            reminderEnabled = #{reminderEnabled},
+            reminderTime = #{reminderTime},
+            isCompletedToday = #{isCompletedToday},
+            totalCompletions = #{totalCompletions}
+        where id = #{id} and userId = #{userId};
+    </update>
+
+</mapper>

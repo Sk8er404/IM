@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.UserLearningProgressMapper">
+
+    <!-- 定义resultMap以正确映射数据库列到Java对象属性，特别是枚举类型 -->
+    <resultMap id="UserLearningProgressResultMap" type="org.com.code.im.pojo.UserLearningProgress">
+        <id property="id" column="id"/>
+        <result property="userId" column="userId"/>
+        <result property="contentId" column="contentId"/>
+        <result property="contentType" column="contentType" javaType="org.com.code.im.pojo.enums.ContentType" jdbcType="VARCHAR"/>
+        <result property="firstAccessTimestamp" column="firstAccessTimestamp"/>
+        <result property="lastAccessTimestamp" column="lastAccessTimestamp"/>
+        <result property="durationViewedSeconds" column="durationViewedSeconds"/>
+        <result property="completionStatus" column="completionStatus" javaType="org.com.code.im.pojo.enums.CompletionStatus" jdbcType="VARCHAR"/>
+    </resultMap>
+
+    <insert id="insertUserLearningProgress" parameterType="org.com.code.im.pojo.UserLearningProgress" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO user_learning_progress
+            (userId, contentId, contentType, firstAccessTimestamp, lastAccessTimestamp, durationViewedSeconds, completionStatus)
+        VALUES
+            (#{userId}, #{contentId}, #{contentType, typeHandler=org.apache.ibatis.type.EnumTypeHandler},
+             #{firstAccessTimestamp}, #{lastAccessTimestamp}, #{durationViewedSeconds},
+             #{completionStatus, typeHandler=org.apache.ibatis.type.EnumTypeHandler})
+    </insert>
+
+    <update id="updateUserLearningProgress" parameterType="org.com.code.im.pojo.UserLearningProgress">
+        UPDATE user_learning_progress
+        <set>
+            <if test="lastAccessTimestamp != null">
+                lastAccessTimestamp = #{lastAccessTimestamp},
+            </if>
+            <if test="durationViewedSeconds != null">
+                durationViewedSeconds = #{durationViewedSeconds},
+            </if>
+            <if test="completionStatus != null">
+                completionStatus = #{completionStatus, typeHandler=org.apache.ibatis.type.EnumTypeHandler},
+            </if>
+        </set>
+        WHERE id = #{id}
+    </update>
+
+    <select id="findByUserIdAndContentIdAndContentType" resultMap="UserLearningProgressResultMap">
+        SELECT id, userId, contentId, contentType, firstAccessTimestamp, lastAccessTimestamp, durationViewedSeconds, completionStatus
+        FROM user_learning_progress
+        WHERE userId = #{userId}
+          AND contentId = #{contentId}
+          AND contentType = #{contentType, typeHandler=org.apache.ibatis.type.EnumTypeHandler}
+    </select>
+
+    <select id="findByUserIdOrderByLastAccessTimestampDesc" resultMap="UserLearningProgressResultMap">
+        SELECT id, userId, contentId, contentType, firstAccessTimestamp, lastAccessTimestamp, durationViewedSeconds, completionStatus
+        FROM user_learning_progress
+        WHERE userId = #{userId}
+        ORDER BY lastAccessTimestamp DESC
+    </select>
+
+</mapper> 

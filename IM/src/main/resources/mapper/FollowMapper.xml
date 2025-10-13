@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.FollowMapper">
+
+    <insert id="insertFollow" parameterType="Follows">
+       insert into follows(userId,fanId)
+       values(#{userId},#{fanId})
+    </insert>
+
+    <delete id="cancelFollow">
+        delete from follows where userId = #{userId} and fanId = #{fanId}
+    </delete>
+
+    <!-- 查询 某个用户和最早关注他的粉丝 这个userId和fanId的组合 在follows表格对应的 autoIncrementId
+         获取这个最小值主要是为了初始化查询粉丝列表操作，
+         给第一次使用queryFanListAndNavigateToNextPageByIdRange方法里面的autoIncrementId > #{curPageMaxId}
+         这里的curPageMaxId赋值用的
+    -->
+    <select id="selectUserFanMinAutoIncreaseId" resultType="java.lang.Long">
+        select min(autoIncreasementId) from follows
+        where userId = #{userId}
+    </select>
+
+    <!-- 使用游标分页查询，同时利用主键索引和普通索引的本身的有序性，快速定位并使用Limit关键字截取分页-->
+    <select id="queryFanListAndNavigateToNextPageByIdRange" parameterType="map" resultType="UserFan">
+        select u.id,u.avatar,u.userName,f.autoIncreasementId
+        from follows as f inner join user as u on f.fanId = u.id
+        inner join(
+            select fanId from follows
+            where userId = #{userId} and autoIncreasementId > #{curPageMaxId}
+            order by autoIncreasementId asc
+            limit #{nextPageMultiplyPageSize}
+        )as subQuery on f.fanId = subQuery.fanId
+        order by f.fanId desc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <select id="queryFanListAndNavigateToPreviousPageByIdRange" parameterType="map" resultType="UserFan">
+        select u.id,u.avatar,u.userName,f.autoIncreasementId
+        from follows as f inner join user as u on f.fanId = u.id
+        inner join(
+            select fanId from follows
+            where userId = #{userId} and autoIncreasementId &lt; #{curPageMinId}
+            order by autoIncreasementId desc
+            limit #{nextPageMultiplyPageSize}
+        )as subQuery on f.fanId = subQuery.fanId
+        order by f.fanId asc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+
+    <select id="queryFollowList" resultType="UserFollowing">
+        select u.id,u.avatar,u.userName,f.createdAt
+        from follows as f inner join user as u on f.userId = u.id
+        where fanId=#{fanId}
+    </select>
+
+</mapper>

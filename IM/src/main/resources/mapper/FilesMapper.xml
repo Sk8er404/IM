@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.FilesMapper">
+
+    <insert id="insertFile" >
+        insert into files (id,userId,userName,fileName,fileType,url)
+        values (#{id},#{userId},#{userName},#{fileName},#{fileType},#{url})
+    </insert>
+
+    <!-- 删除文件,结尾故意加上userId是为了防止有人恶意把他人文件删除 -->
+    <delete id="deleteFileById" >
+        delete from files where id = #{id} and userId = #{userId}
+    </delete>
+
+    <select id="getUrl" resultType="String">
+        select url from files where id = #{id}
+    </select>
+
+    <!--通过关键词搜索文件-->
+    <select id="searchFileByKeyWords" resultType="Files">
+        select id,userId,userName,fileName,fileType,url,createdAt
+        from files
+        where match(fileName) against(concat(#{keyword}, '*') in boolean mode) and userId = #{userId}
+    </select>
+
+    <!-- 通过文件上传时间搜索文件-->
+    <select id="searchFileByTime" resultType="Files">
+        select id,userId,userName,fileName,fileType,url,createdAt
+        from files
+        <where>
+            <if test="startTime != null">
+                and createdAt >= #{startTime}
+            </if>
+            <if test="endTime != null">
+                and createdAt &lt;= #{endTime}
+            </if>
+            and userId = #{userId}
+        </where>
+    </select>
+
+    <select id="queryAllFiles" resultType="Files">
+        select id,userId,userName,fileName,fileType,url,createdAt
+        from files
+        where userId = #{userId}
+    </select>
+
+    <select id="queryFileByType" resultType="Files">
+        select id,userId,userName,fileName,fileType,url,createdAt
+        from files
+        where fileType = #{fileType} and userId = #{userId}
+    </select>
+
+    <select id="queryFileByTypes" resultType="Files">
+        select id,userId,userName,fileName,fileType,url,createdAt
+        from files
+        where userId = #{userId}
+        <if test="fileTypes != null and fileTypes.length > 0">
+            and fileType in
+            <foreach collection="fileTypes" item="type" open="(" separator="," close=")">
+                #{type}
+            </foreach>
+        </if>
+        order by createdAt desc
+    </select>
+
+</mapper>

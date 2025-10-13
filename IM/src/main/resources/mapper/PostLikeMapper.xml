@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.PostLikeMapper">
+
+    <insert id="insertPostLike">
+        insert ignore into post_likes (postId, userId)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.postId}, #{item.userId})
+        </foreach>
+    </insert>
+
+    <select id="checkIfUserAlreadyGiveLike" resultType="Boolean">
+        select EXISTS (
+            select 1 from post_likes
+            where postId = #{postId} and userId = #{userId}
+        )
+    </select>
+
+
+    <delete id="deletePostLike">
+        delete from post_likes
+        where (postId, userId) in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            (#{item.postId}, #{item.userId})
+        </foreach>
+    </delete>
+
+    <!-- 查询自己喜欢过哪些帖子Id -->
+    <select id="queryLikedPostList" resultType="Long">
+        select postId
+        from post_likes
+        where userId = #{userId}
+    </select>
+
+    <update id="updatePostLikes">
+        update posts
+        set likeCount = case id
+        <foreach collection="list" item="item">
+            when #{item.postId} then likeCount + #{item.delta}
+        </foreach>
+        end
+        where id in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item.postId}
+        </foreach>
+    </update>
+
+</mapper>

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.PostCommentLikeMapper">
+
+    <insert id="insertPostCommentLike">
+        insert into post_comment_likes (postId,postCommentId, userId)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.superObjectId},#{item.postCommentId}, #{item.userId})
+        </foreach>
+    </insert>
+
+    <select id="checkIfUserAlreadyGiveLike" resultType="Boolean">
+        select EXISTS (
+            select 1 from post_comment_likes
+            where postCommentId = #{postCommentId} and userId = #{userId}
+        )
+    </select>
+
+
+    <delete id="deletePostCommentLike">
+        delete from post_comment_likes
+        where (postCommentId, userId) in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            (#{item.postCommentId}, #{item.userId})
+        </foreach>
+    </delete>
+
+    <update id="updatePostCommentLikes">
+        update post_comments
+        set likeCount = case id
+        <foreach collection="list" item="item">
+            when #{item.postCommentId} then likeCount + #{item.delta}
+        </foreach>
+        end
+        where id in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item.postCommentId}
+        </foreach>
+    </update>
+
+</mapper>

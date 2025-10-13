@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.SessionMapper">
+    <insert id="createSession" parameterType="Sessions">
+        insert into sessions(
+        <trim suffixOverrides=",">
+            sessionId,sessionType,
+            <if test="groupAvatar != null">groupAvatar,</if>
+            <if test="groupName != null">groupName,</if>
+            <if test="ownerId != null">ownerId,</if>
+            <if test="createdAt != null">createdAt,</if>
+        </trim>
+        )values (
+        <trim suffixOverrides=",">
+            #{sessionId},#{sessionType},
+            <if test="groupAvatar != null">#{groupAvatar},</if>
+            <if test="groupName != null">#{groupName},</if>
+            <if test="ownerId != null">#{ownerId},</if>
+            <if test="createdAt != null">#{createdAt},</if>
+        </trim>
+        )
+    </insert>
+
+    <delete id="deleteGroupSession">
+        delete from sessions where sessionId = #{sessionId}
+    </delete>
+
+    <select id="selectPrivateSession" resultType="Long">
+        select sessionId from private_members
+        where userId1 = #{userId1} and userId2 = #{userId2}
+    </select>
+
+    <select id="queryGroupInfo" resultType="Sessions">
+        select sessionId,groupAvatar,groupName,ownerId,createdAt
+        from sessions
+        where sessionId = #{sessionId}
+    </select>
+
+    <select id="queryGroupSessionList" resultType="Sessions">
+        select s.sessionId,s.groupAvatar,s.groupName,s.ownerId,s.createdAt
+        from sessions s inner join group_members u on s.sessionId = u.sessionId
+        where u.userId = #{userId}
+    </select>
+
+    <select id="queryPrivateSessionList" resultType="PrivateMembers">
+        select sessionId,userId1,userId2
+        from private_members
+        where userId1 = #{userId} or userId2 = #{userId}
+    </select>
+
+    <update id="updateGroupInfo" parameterType="Sessions">
+        update sessions set
+        <trim suffixOverrides=",">
+            <if test="groupAvatar != null">groupAvatar = #{groupAvatar},</if>
+            <if test="groupName != null">groupName = #{groupName},</if>
+        </trim>
+        where sessionId = #{sessionId}
+    </update>
+
+    <select id="queryGroupSessionIdList" resultType="Long">
+        select sessionId from group_members
+        where userId = #{userId}
+    </select>
+
+    <!-- 使用UNION ALL代替UNION会更高效，因为UNION会消除重复项，而UNION ALL不会。
+    由于私聊和群聊的共用一个雪花算法的sessionIdWorker,所以sessionId不会重复,
+    所以可以安全使用UNION ALL-->
+    <select id="queryAllSessionIdList" resultType="Long">
+        select sessionId from private_members
+        where userId1 = #{userId} or userId2 = #{userId}
+        UNION ALL
+        select sessionId from group_members
+        where userId = #{userId}
+    </select>
+
+</mapper>

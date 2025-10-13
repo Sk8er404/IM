@@ -1,0 +1,187 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.PostMapper">
+
+    <resultMap id="PostResultMap" type="Posts">
+        <id property="id" column="id" />
+        <result property="userId" column="userId"/>
+        <result property="userName" column="userName"/> <!-- Assuming userName is joined or handled separately -->
+        <result property="type" column="type"/>
+        <result property="title" column="title"/>
+        <result property="content" column="content"/>
+        <result property="tags" column="tags" typeHandler="org.com.code.im.utils.serializer.StringListToJsonConverter"/>
+        <result property="createdAt" column="createdAt"/>
+        <result property="updatedAt" column="updatedAt"/>
+        <result property="viewCount" column="viewCount"/>
+        <result property="likeCount" column="likeCount"/>
+        <result property="commentCount" column="commentCount"/>
+        <result property="autoIncreasementId" column="autoIncreasementId"/>
+    </resultMap>
+
+    <insert id="savePost" parameterType="Posts">
+        INSERT INTO posts (id, userId, userName, type, title, content
+                           <if test="tags != null and tags.size() > 0">,tags</if>
+                           )
+        VALUES (#{id}, #{userId}, #{userName}, #{type}, #{title}, #{content}
+                <if test="tags != null and tags.size() > 0">,#{tags, typeHandler=org.com.code.im.utils.StringListToJsonConverter}</if>
+                )
+    </insert>
+
+    <select id="findPostById" resultMap="PostResultMap">
+        SELECT 
+            id,userId,userName,type, title, content,
+            tags, createdAt, updatedAt, viewCount,
+            likeCount, commentCount
+        FROM posts
+        WHERE id = #{id}
+    </select>
+
+    <update id="updatePost">
+        UPDATE posts
+        <set>
+           <if test="title != null">
+                title = #{title},
+            </if>
+            <if test="content != null">
+                content = #{content},
+            </if>
+            <if test="tags != null and tags.size()>0">
+                tags = #{tags, typeHandler=org.com.code.im.utils.StringListToJsonConverter},
+            </if>
+        </set>
+        WHERE id = #{id} AND userId = #{userId}
+    </update>
+
+    <update id="incrementViewCount">
+        UPDATE posts SET viewCount = viewCount + 1 WHERE id = #{id}
+    </update>
+
+    <select id="selectPostListByManyIds" resultMap="PostResultMap">
+        SELECT id,userId,userName,type,title,viewCount,commentCount,likeCount,tags,
+               createdAt,updatedAt
+        FROM posts
+        <where>
+            <if test="ids != null and ids.size() > 0">
+                id IN
+                <foreach collection="ids" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+                ORDER BY FIELD(id,
+                <foreach collection="ids" item="id" separator=",">
+                    #{id}
+                </foreach>
+                )
+            </if>
+            <if test="ids == null or ids.size() == 0">
+                1 = 0
+            </if>
+        </where>
+    </select>
+
+    <delete id="deletePostByIdAndUserId">
+        DELETE FROM posts WHERE id = #{id} AND userId = #{userId}
+    </delete>
+
+    <delete id="deleteAllPostLikePfOnePost">
+        DELETE FROM post_likes WHERE postId = #{postId}
+    </delete>
+
+    <delete id="deleteAllCommentOfOnePost">
+        DELETE FROM post_comments WHERE postId = #{postId}
+    </delete>
+
+    <delete id="deleteAllCommentLikeOfOnePost">
+        DELETE FROM post_comment_likes WHERE postId = #{postId}
+    </delete>
+    
+    <!-- 获取帖子最小autoIncreasementId，用于初始化分页查询 -->
+    <select id="selectPostMinAutoIncrementId" resultType="java.lang.Long">
+        select min(autoIncreasementId) from posts
+        <where>
+            <if test="userId != null">
+                userId = #{userId}
+            </if>
+            <if test="postType != null">
+                <if test="userId != null">and</if>
+                type = #{postType}
+            </if>
+        </where>
+    </select>
+
+    <!-- 帖子游标分页 - 按类型向后翻页 -->
+    <select id="queryPostsByTypeAndNavigateToNextPageByIdRange" parameterType="map" resultType="Posts">
+        select id, userId, userName, type, title, viewCount, likeCount, commentCount, createdAt, updatedAt, autoIncreasementId
+        from posts
+        where type = #{postType}
+              and autoIncreasementId > #{curPageMaxId}
+        order by autoIncreasementId asc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 帖子游标分页 - 按类型向前翻页 -->
+    <select id="queryPostsByTypeAndNavigateToPreviousPageByIdRange" parameterType="map" resultType="Posts">
+        select id, userId, userName, type, title, viewCount, likeCount, commentCount, createdAt, updatedAt, autoIncreasementId
+        from posts
+        where type = #{postType}
+              and autoIncreasementId &lt; #{curPageMinId}
+        order by autoIncreasementId desc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 帖子游标分页 - 按用户向后翻页 -->
+    <select id="queryPostsByUserIdAndNavigateToNextPageByIdRange" parameterType="map" resultType="Posts">
+        select id, userId, userName, type, title, viewCount, likeCount, commentCount, createdAt, updatedAt, autoIncreasementId
+        from posts
+        where userId = #{userId}
+              and autoIncreasementId > #{curPageMaxId}
+        order by autoIncreasementId asc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 帖子游标分页 - 按用户向前翻页 -->
+    <select id="queryPostsByUserIdAndNavigateToPreviousPageByIdRange" parameterType="map" resultType="Posts">
+        select id, userId, userName, type, title, viewCount, likeCount, commentCount, createdAt, updatedAt, autoIncreasementId
+        from posts
+        where userId = #{userId}
+              and autoIncreasementId &lt; #{curPageMinId}
+        order by autoIncreasementId desc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 最新帖子游标分页 - 向后翻页 -->
+    <select id="queryLatestPostsAndNavigateToNextPageByIdRange" parameterType="map" resultType="Posts">
+        select id, userId, userName, type, title, viewCount, likeCount, commentCount, createdAt, updatedAt, autoIncreasementId
+        from posts
+        where autoIncreasementId > #{curPageMaxId}
+        order by autoIncreasementId asc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 最新帖子游标分页 - 向前翻页 -->
+    <select id="queryLatestPostsAndNavigateToPreviousPageByIdRange" parameterType="map" resultType="Posts">
+        select id, userId, userName, type, title, viewCount, likeCount, commentCount, createdAt, updatedAt, autoIncreasementId
+        from posts
+        where autoIncreasementId &lt; #{curPageMinId}
+        order by autoIncreasementId desc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 热门帖子游标分页 - 向后翻页 -->
+    <select id="queryMostViewedPostsAndNavigateToNextPageByIdRange" parameterType="map" resultType="Posts">
+        select id, userId, userName, type, title, viewCount, likeCount, commentCount, createdAt, updatedAt, autoIncreasementId
+        from posts
+        where autoIncreasementId > #{curPageMaxId}
+        order by viewCount desc, autoIncreasementId asc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 热门帖子游标分页 - 向前翻页 -->
+    <select id="queryMostViewedPostsAndNavigateToPreviousPageByIdRange" parameterType="map" resultType="Posts">
+        select id, userId, userName, type, title, viewCount, likeCount, commentCount, createdAt, updatedAt, autoIncreasementId
+        from posts
+        where autoIncreasementId &lt; #{curPageMinId}
+        order by viewCount desc, autoIncreasementId desc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+</mapper> 

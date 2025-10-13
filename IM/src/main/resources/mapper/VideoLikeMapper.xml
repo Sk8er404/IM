@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.VideoLikeMapper">
+
+    <insert id="insertVideoLike">
+        insert into video_likes (videoId, userId)
+        values
+        <foreach collection="list" item="item" separator=",">
+            (#{item.videoId}, #{item.userId})
+        </foreach>
+    </insert>
+
+    <!-- 查询用户是否已经喜欢过视频-->
+    <select id="checkIfUserAlreadyGiveLike" resultType="Boolean">
+        select EXISTS (
+            select 1 from video_likes
+            where videoId = #{videoId} and userId = #{userId}
+        )
+    </select>
+
+
+    <delete id="deleteVideoLike">
+        delete from video_likes
+        where (videoId, userId) in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            (#{item.videoId}, #{item.userId})
+        </foreach>
+    </delete>
+
+
+    <!-- 查询自己喜欢过哪些视频Id -->
+    <select id="queryLikedVideoList" resultType="Long">
+        select videoId
+        from video_likes
+        where userId = #{userId}
+    </select>
+
+    <update id="updateVideoLikes">
+        update videos
+        set likeCount = case id
+        <foreach collection="list" item="item">
+            when #{item.videoId} then likeCount + #{item.delta}
+        </foreach>
+        end
+        where id in
+        <foreach collection="list" item="item" open="(" separator="," close=")">
+            #{item.videoId}
+        </foreach>
+        and status = 'approved'
+    </update>
+
+</mapper>

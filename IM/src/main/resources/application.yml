@@ -1,0 +1,96 @@
+server:
+  port: 8080
+
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/im?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&allowPublicKeyRetrieval=true
+    username: root
+    password: 123456
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  servlet:
+    multlocalhostart:
+      enabled: true
+      max-file-size: 6MB
+      max-request-size: 6MB
+  elasticsearch:
+    host: http://localhost:9200
+    allowedIpAddress: localhost
+    apiKey: ${ELASTICSEARCH_API_KEY}
+  ai:
+    dashscope:
+      api-key:
+        ${DASH_SCOPE_API_KEY}
+      text-embeddingModel:
+        text-embedding-v3
+      chatModel:
+        qwen-flash
+
+netty:
+  #指定Netty服务器处理请求的路径前缀或路由。
+  #在这个例子中，所有以/api/chat开头的请求可能会被Netty服务器处理。
+  port: 8081
+  path: /api/chat
+
+
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: org.com.code.im.pojo
+
+rocketmq:
+  name-server: localhost:9876
+  producer:
+    group: message-producer
+    retry-times-when-send-failed: 3
+    retry-times-when-send-async-failed: 3
+  consumer:
+    # 消费者组配置（这里只是示例，实际消费者组在@RocketMQMessageListener中配置）
+    group1: chat-Consumer
+    group2: group-Consumer
+    group3: privateSession-Consumer
+    group4: querySession-Consumer
+    group5: reminderMsg-Consumer
+  # Topic配置
+  topics:
+    topic1: chat           # 聊天相关消息
+    topic2: reminder   # 任务提醒消息
+  tags:
+    tag1: messages
+    tag2: groupCreate
+    tag3: privateSessionCreate
+    tag4: querySession
+    tag5: task
+
+
+aliyun:
+  oss:
+    endpoint: oss-cn-fuzhou.aliyuncs.com
+    accessKeyId: ${ALIYUN_OSS_ACCESS_KEY_ID}
+    accessKeySecret: ${ALIYUN_OSS_ACCESS_KEY_SECRET}
+    bucketName: sk8erboi
+    bucketDomain: ${ALIYUN_OSS_BUCKET_DOMAIN}
+
+#app:
+#  data:
+#    geodb-path: /app/resources/GeoLite2-City.mmdb
+#    sensitive-dict-path: /app/resources/sensitiveDict
+#    bitmap-path: /app/resources/BitmapData
+#  jwt:
+#    secret: 1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+#  url: localhost
+#  maxOnlineNumber: 4
+
+
+app:
+  data:
+    geodb-path: src/main/resources/GeoLite2-City.mmdb
+    sensitive-dict-path: src/main/resources/sensitiveDict
+    bitmap-path: src/main/resources/BitmapData
+  jwt:
+    secret: ${JWT_SECRET}
+  url: localhost
+  maxOnlineNumber: 4

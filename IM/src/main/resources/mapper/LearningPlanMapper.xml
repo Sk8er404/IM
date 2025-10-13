@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.LearningPlanMapper">
+
+    <insert id="savePlan" parameterType="LearningPlan">
+        insert into learning_plan (id, userId, title, goal, status)
+        values (#{id}, #{userId}, #{title}, #{goal}, #{status})
+    </insert>
+
+    <select id="findByUserId" resultType="LearningPlan">
+        select id, userId, title,goal
+        from learning_plan
+        where userId = #{userId};
+    </select>
+
+    <select id="findByIdAndUserId" resultType="LearningPlan">
+        select id, userId, title, goal, status, createdAt, updatedAt
+        from learning_plan
+        where id = #{id} and userId = #{userId};
+    </select>
+
+    <select id="findAllActivePlans" resultType="LearningPlan">
+        select id, title, goal, status
+        from learning_plan
+        where status = 'ACTIVE';
+    </select>
+
+    <delete id="deleteByUserIdAndId">
+        delete from learning_plan
+        where userId = #{userId} and  id = #{id};
+    </delete>
+
+    <update id="updatePlan">
+        update learning_plan
+        set title = #{title}, goal = #{goal}, status = #{status}
+        where id = #{id} and userId = #{userId};
+    </update>
+
+</mapper>

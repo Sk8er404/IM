@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.VideoCommentMapper">
+
+    <insert id="saveComment" parameterType="VideoComments">
+        INSERT INTO video_comments (id, videoId, userId,userName, content,parentId,replyTo)
+        VALUES (#{id}, #{videoId}, #{userId},#{userName}, #{content},#{parentId},#{replyTo})
+    </insert>
+
+    <select id="findCommentById" resultType="VideoComments">
+        SELECT * FROM video_comments WHERE id = #{id}
+    </select>
+
+    <update id="updateComment" parameterType="VideoComments">
+        UPDATE video_comments
+        SET content = #{content}
+        WHERE id = #{id} AND userId = #{userId}
+    </update>
+
+    <delete id="deleteCommentByIdAndUserId">
+        DELETE FROM video_comments WHERE id = #{id} AND userId = #{userId}
+    </delete>
+
+    <delete id="deleteRepliesByParentId">
+        DELETE FROM video_comments WHERE parentId = #{parentId}
+    </delete>
+
+    <update id="increaseCommentCount">
+        update video_comments set repliesCount = repliesCount + 1 where id = #{id}
+    </update>
+
+    <update id="decreaseCommentCount">
+        update video_comments set repliesCount = GREATEST(0, repliesCount - 1) where id = #{id}
+    </update>
+
+    <update id="increaseVideoCommentsCount">
+        update posts set commentCount = commentCount + 1 where id = #{id}
+    </update>
+
+    <update id="decreaseVideoCommentsCount">
+        update posts set commentCount = GREATEST( 0 ,commentCount - #{repliesCount}-1) where id = #{id}
+    </update>
+    
+    <!-- 获取评论最小autoIncreasementId，用于初始化分页查询 -->
+    <select id="selectCommentMinAutoIncrementId" resultType="java.lang.Long">
+        select min(autoIncreasementId) from video_comments
+        where videoId = #{videoId}
+        <if test="parentId != null">
+            and parentId = #{parentId}
+        </if>
+        <if test="parentId == null">
+            and parentId IS NULL
+        </if>
+    </select>
+
+    <!-- 评论游标分页 - 向后翻页 -->
+    <select id="queryCommentsAndNavigateToNextPageByIdRange" parameterType="map" resultType="VideoComments">
+        select id, videoId, userId, userName, content, parentId, replyTo, repliesCount, createdAt, autoIncreasementId
+        from video_comments
+        where videoId = #{videoId}
+        <if test="parentId != null">
+            and parentId = #{parentId}
+        </if>
+        <if test="parentId == null">
+            and parentId IS NULL
+        </if>
+              and autoIncreasementId > #{curPageMaxId}
+        order by autoIncreasementId asc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 评论游标分页 - 向前翻页 -->
+    <select id="queryCommentsAndNavigateToPreviousPageByIdRange" parameterType="map" resultType="VideoComments">
+        select id, videoId, userId, userName, content, parentId, replyTo, repliesCount, createdAt, autoIncreasementId
+        from video_comments
+        where videoId = #{videoId}
+        <if test="parentId != null">
+            and parentId = #{parentId}
+        </if>
+        <if test="parentId == null">
+            and parentId IS NULL
+        </if>
+              and autoIncreasementId &lt; #{curPageMinId}
+        order by autoIncreasementId desc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+</mapper> 

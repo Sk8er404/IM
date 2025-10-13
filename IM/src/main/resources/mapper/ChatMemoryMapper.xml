@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.ChatMemoryMapper">
+
+    <insert id="createAiConversation" parameterType="map">
+        insert into ai_conversation_sessions (conversationId, userId
+        <if test="title != null and title != ''">
+            , title
+        </if>
+        <if test="createdAt != null">
+            , createdAt
+        </if>
+        <if test="updatedAt != null">
+            , updatedAt
+        </if>
+        ) values (#{conversationId}, #{userId}
+        <if test="title != null and title != ''">
+            , #{title}
+        </if>
+        <if test="createdAt != null">
+            , #{createdAt}
+        </if>
+        <if test="updatedAt != null">
+            , #{updatedAt}
+        </if>
+        )
+    </insert>
+
+    <select id="getAiConversation" parameterType="map" resultType="AiConversation">
+        select conversationId,title from ai_conversation_sessions
+        where userId = #{userId}
+        order by id desc
+        limit #{offset}, #{pageSize}
+    </select>
+
+    <select id="getAiConversationSummaryById" parameterType="map" resultType="String">
+        select title from ai_conversation_sessions
+        where conversationId = #{conversationId} and userId = #{userId}
+    </select>
+
+    <delete id="deleteAiConversation" parameterType="map">
+        delete from ai_conversation_sessions where conversationId = #{conversationId} and userId = #{userId}
+    </delete>
+
+    <update id="updateAiConversation" parameterType="map">
+        update ai_conversation_sessions set title = #{title} where conversationId = #{conversationId} and userId = #{userId}
+    </update>
+</mapper>

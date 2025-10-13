@@ -1,0 +1,37 @@
+{
+  "mappings": {
+    "properties": {
+      "conversation_id": {
+        "type": "keyword"
+      },
+      "user_id": {
+        "type": "long"
+      },
+      "sequence_id": {
+        "type": "long"
+      },
+      "summary": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart"
+      },
+      "summary_embedding": {
+        "type": "dense_vector",
+        "dims": 1024,
+        "index": true,
+        "similarity": "cosine"
+      },
+
+      "original_question": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart"
+      },
+      "original_answer": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart"
+      }
+    }
+  }
+}

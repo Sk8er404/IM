@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.com.code.im.mapper.VideoMapper">
+
+    <resultMap id="VideoResultMap" type="Videos">
+        <id property="id" column="id" />
+        <result property="userId" column="userId"/>
+        <result property="userName" column="userName"/> <!-- Assuming userName is joined or handled separately -->
+        <result property="title" column="title"/>
+        <result property="url" column="url"/>
+        <result property="views" column="views"/>
+        <result property="likeCount" column="likeCount"/>
+        <result property="commentCount" column="commentCount"/>
+        <result property="tags" column="tags" typeHandler="org.com.code.im.utils.serializer.StringListToJsonConverter"/>
+        <result property="category" column="category"/>
+        <result property="duration" column="duration"/>
+        <result property="description" column="description"/>
+        <result property="createdAt" column="createdAt"/>
+        <result property="status" column="status"/>
+        <result property="reviewerId" column="reviewerId"/>
+        <result property="reviewedAt" column="reviewedAt"/>
+        <result property="reviewNotes" column="reviewNotes"/>
+        <result property="autoIncreasementId" column="autoIncreasementId"/>
+    </resultMap>
+
+    <insert id="insertVideo" >
+        insert into videos (
+        <trim suffixOverrides=",">
+            id,userId,userName,title,url,
+            <if test="tags != null and tags.size()>0">tags,</if>
+            <if test="category != null">category,</if>
+            <if test="description != null">description,</if>
+            duration
+        </trim>
+        )values (
+        <trim suffixOverrides=",">
+            #{id},#{userId},#{userName},#{title},#{url},
+            <if test="tags != null and tags.size()>0">#{tags, typeHandler=org.com.code.im.utils.StringListToJsonConverter},</if>
+            <if test="category != null">#{category},</if>
+            <if test="description != null">#{description},</if>
+            #{duration}
+        </trim>
+        )
+    </insert>
+
+    <!-- 删除视频,结尾故意加上userId是为了防止有人恶意把他人视频删除 -->
+    <delete id="deleteVideo" >
+        delete from videos where id = #{id} and userId = #{userId}
+    </delete>
+
+    <delete id="deleteAllVideoLikePfOneVideo">
+        DELETE FROM video_likes WHERE videoId = #{videoId}
+    </delete>
+
+    <delete id="deleteAllCommentOfOneVideo">
+        DELETE FROM video_comments WHERE videoId = #{videoId}
+    </delete>
+
+    <!-- 视频使用的是懒加载,加载的视频列表只有加载视频的部分信息,只有用户真正点击某个视频才会加载完整信息-->
+    <select id="queryVideoDetail" resultMap="VideoResultMap">
+        select id,userId,userName,title,url,views,likeCount,commentCount,
+               tags,category,duration,description,createdAt
+        from videos
+        where id = #{id} and status = 'approved'
+    </select>
+
+    <update id="increaseViewCount" >
+        update videos set views = views + 1 where id = #{id} and status = 'approved'
+    </update>
+
+    <select id="querySelfVideoDetail" resultMap="VideoResultMap">
+        select id,userId,userName,title,url,views,likeCount,commentCount,commentCount,
+               tags,category,duration,description,createdAt,status,reviewNotes
+        from videos
+        where userId = #{userId} and id = #{id}
+    </select>
+
+    <!-- 这是给普通账号查询自己等待审核的视频-->
+    <select id="selectSelfVideoWaitToReview" resultType="Videos">
+        select id,userId,userName,title,views,likeCount,commentCount,
+              category,duration,createdAt,status,reviewNotes
+        from videos
+        where userId=#{userId} and status = 'waitToReview'
+    </select>
+
+    <!-- 这是给普通账号查询自己的已经过审的视频-->
+    <select id="selectSelfApprovedVideo" resultType="Videos">
+        select id,userId,userName,title,views,likeCount,commentCount,
+               category,duration,createdAt,status,reviewNotes
+        from videos
+        where userId=#{userId} and status = 'approved'
+    </select>
+
+
+    <!-- 这是给普通账号查询自己的被拒绝过审的视频-->
+    <select id="selectSelfRejectedVideo" resultType="Videos">
+        select id,userId,userName,title,views,likeCount,commentCount,
+               category,duration,createdAt,status,reviewNotes
+        from videos
+        where userId=#{userId} and status = 'rejected'
+    </select>
+
+    <!-- 这是给管理员账号查询所有未被通过的视频-->
+    <select id="selectAllVideoWaitToReview" resultType="Videos">
+        select id,userId,userName,title,views,likeCount,commentCount,
+               category,duration,createdAt,status
+        from videos
+        where status = 'waitToReview'
+    </select>
+
+    <!-- 这是给管理员账号修改视频审核状态-->
+    <update id="updateVideoReviewStatus" >
+        update videos set status = #{status},reviewerId = #{reviewerId},reviewNotes = #{reviewNotes}
+        where id = #{id}
+    </update>
+
+    <select id="getUrl" resultType="String">
+        select url from videos where id = #{id}
+    </select>
+
+    <select id="selectVideoListByManyIds" resultMap="VideoResultMap">
+        select id,userId,userName,title,views,likeCount,commentCount,tags,
+               category,duration,createdAt
+        from videos
+        <where>
+            <if test="ids != null and ids.size() > 0">
+                id in
+                <foreach collection="ids" item="id" open="(" separator="," close=")">
+                    #{id}
+                </foreach>
+                and status = 'approved'
+                order by field(id,
+                <foreach collection="ids" item="id" separator=",">
+                    #{id}
+                </foreach>
+                )
+            </if>
+            <if test="ids == null or ids.size() == 0">
+                1 = 0
+            </if>
+        </where>
+    </select>
+
+    <!-- 获取视频最小autoIncreasementId，用于初始化分页查询 -->
+    <select id="selectVideoMinAutoIncrementId" resultType="java.lang.Long">
+        select min(autoIncreasementId) from videos
+        where status = 'approved'
+    </select>
+    
+
+    <!-- 最新视频游标分页 - 向后翻页 -->
+    <select id="queryLatestVideosAndNavigateToNextPageByIdRange" parameterType="map" resultType="Videos">
+        select id, userId, userName, title, views, likeCount, commentCount,
+               category, duration, createdAt, autoIncreasementId
+        from videos
+        where status = 'approved' 
+              and autoIncreasementId > #{curPageMaxId}
+        order by autoIncreasementId asc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 最新视频游标分页 - 向前翻页 -->
+    <select id="queryLatestVideosAndNavigateToPreviousPageByIdRange" parameterType="map" resultType="Videos">
+        select id, userId, userName, title, views, likeCount, commentCount,
+               category, duration, createdAt, autoIncreasementId
+        from videos
+        where status = 'approved' 
+              and autoIncreasementId &lt; #{curPageMinId}
+        order by autoIncreasementId desc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 热门视频游标分页 - 向后翻页 -->
+    <select id="queryMostViewedVideosAndNavigateToNextPageByIdRange" parameterType="map" resultType="Videos">
+        select id, userId, userName, title, views, likeCount, commentCount,
+               category, duration, createdAt, autoIncreasementId
+        from videos
+        where status = 'approved' 
+              and autoIncreasementId > #{curPageMaxId}
+        order by views desc, autoIncreasementId asc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+    <!-- 热门视频游标分页 - 向前翻页 -->
+    <select id="queryMostViewedVideosAndNavigateToPreviousPageByIdRange" parameterType="map" resultType="Videos">
+        select id, userId, userName, title, views, likeCount, commentCount,
+               category, duration, createdAt, autoIncreasementId
+        from videos
+        where status = 'approved' 
+              and autoIncreasementId &lt; #{curPageMinId}
+        order by views desc, autoIncreasementId desc
+        limit #{nextPageMultiplyPageSize}
+    </select>
+
+</mapper>
